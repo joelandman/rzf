@@ -1,16 +1,21 @@
-OPT    = -O3 -ffree-form -ffast-math
+OPT    = -O3 -ffree-form  
 CFLAGS = ${OPT} -g
-# -march=skylake
-#CFLAGS = ${BASIC} -g
 CAFLAGS = -Wa,-adhln -g
-#-S -dA -dp
+GFVER=-8
 
-all: frzf.x 
+all: frzf.x frzf_opt1.x frzf_opt2.x
 
 frzf.x: frzf.f
-	gfortran -c ${CFLAGS} ${CAFLAGS} $< > frzf.S
-	gfortran ${CFLAGS} -o frzf.x $< 
+	gfortran${GFVER} -c ${CFLAGS} ${CAFLAGS} $< > frzf.S
+	gfortran${GFVER} ${CFLAGS} -o frzf.x $< 
 
+frzf_opt1.x: frzf_opt1.f
+	gfortran${GFVER} -c ${CFLAGS} ${CAFLAGS} $< > frzf_opt1.S
+	gfortran${GFVER} ${CFLAGS} -o frzf_opt1.x $< 
+
+frzf_opt2.x: frzf_opt2.f
+	gfortran${GFVER} -c ${CFLAGS} ${CAFLAGS} $< > frzf_opt2.S
+	gfortran${GFVER} ${CFLAGS} -o frzf_opt2.x $<
 
 
 clean:

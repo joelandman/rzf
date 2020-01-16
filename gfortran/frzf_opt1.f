@@ -15,13 +15,31 @@ print *,"      error = ",pi_squared_over_6 - zeta_2
 end
 
 double precision function zeta(N,a)
-integer*8 N,a,k
-double precision sum
+integer*8 N,a,k,ur,Nm
+double precision sum, r
 
+! unroll by 4
+ur = 4
+
+!top portion of loop
+Nm = N - mod(N,ur)
 sum = 0.0
-do k=N-1,1,-1
-   sum = sum + 1.0d0/(dble(k)**a)
+do k=N-1,Nm,-1
+   r = 1.0/k
+   sum = sum + r**a
 enddo
+
+!unrolled portion of loop
+do k=Nm-1,ur,-ur
+   sum = sum + (1.0/dble(k-0))**a + (1.0/dble(k-1))**a + (1.0/dble(k-2))**a + (1.0/dble(k-3))**a
+enddo
+
+!bottom portion of loop
+do k=ur-1,1,-1
+   r = 1.0/k
+   sum = sum + r**a
+enddo
+
 zeta = sum
 
 end function

@@ -1,10 +1,10 @@
 #!/usr/bin/env julia
 using Printf
+using Distributed
 
 function ζ(N::Int64,a::Int64)
-  s = 0.0
-  for i ∈ 1:N
-    s+=(1.0/i)^a
+  s = @distributed (+) for i ∈ 1:N
+    (1.0/i)^a
   end
   s
 end

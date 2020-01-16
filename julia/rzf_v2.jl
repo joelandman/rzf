@@ -1,15 +1,24 @@
-#!/usr/bin/env julia
+#!/usr/bin/env julia -- -p4
 using Printf
+using Distributed
 
 function ζ(N::Int64,a::Int64)
   s = 0.0
-  for i ∈ 1:N
-    s+=(1.0/i)^a
+  e = convert(Float64,a)
+
+  #for i ∈ 1:N
+  #  s += (1.0/i)^e
+  #end
+
+  @distributed (+) for i ∈ 1:N
+     (1.0/i)^e
   end
-  s
+
+
 end
 
-N = 16000000000
+#N = 16000000000
+N = 1600000000
 @time ζ_2 = ζ(N,2)
 π_squared_over_6 = π^2 / 6.0;
 

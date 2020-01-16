@@ -3,7 +3,7 @@ using Printf
 
 function ζ(N::Int64,a::Int64)
   s = 0.0
-  for i ∈ 1:N
+  @simd for i ∈ 1:N
     s+=(1.0/i)^a
   end
   s

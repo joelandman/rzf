@@ -2,10 +2,18 @@
 using Printf
 
 function ζ(N::Int64,a::Int64)
+  u = 4
+  Nm = N - N % u
   s = 0.0
-  for i ∈ 1:N
-    s+=(1.0/i)^a
+  
+  @simd for i ∈ 1:u:Nm
+    s += (1.0/i)^a + (1.0/(i+1))^a + (1.0/(i+2))^a + (1.0/(i+3))^a 
   end
+
+  for i ∈ Nm:N
+    s += (1.0/i)^a
+  end
+
   s
 end
 

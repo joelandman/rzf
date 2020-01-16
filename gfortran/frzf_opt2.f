@@ -15,12 +15,17 @@ print *,"      error = ",pi_squared_over_6 - zeta_2
 end
 
 double precision function zeta(N,a)
-integer*8 N,a,k
-double precision sum
+integer*8 N,a,k,j
+double precision sum,r,q
 
 sum = 0.0
 do k=N-1,1,-1
-   sum = sum + 1.0d0/(dble(k)**a)
+   r = 1.0/dble(k)
+   q = r
+   do j=2,a
+      q = q * r
+   enddo
+   sum = sum + q
 enddo
 zeta = sum
 
