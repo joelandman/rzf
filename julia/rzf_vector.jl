@@ -1,10 +1,11 @@
 #!/usr/bin/env julia
 using Printf
 using Distributed
+using TimerOutputs
 
-function ζ(N::Int64,a::Int64)
+function ζ(N,a)
   s = 0.0
-  e = convert(Float64,a)
+  e = 1.0*a
 
   VLEN      = 512   #vector length
 
@@ -32,7 +33,6 @@ function ζ(N::Int64,a::Int64)
   if N == start_index
     s = 0.0
   else
-    #@printf("in warmup loop\n")
    for i ∈ N:-1:start_index+1
     s += (1.0/i)^e
    end
@@ -47,34 +47,42 @@ function ζ(N::Int64,a::Int64)
   end
 
   # clean up loop to handle post vector loop calc
-  if 0 == 1
-   for i ∈ end_index:-1:1
-     s += (1.0/i)^e
-   end
-  end
-  #@printf("(post cleanup) s=%f\n",s)
 
-
-  #for i in 1:VLEN
-  # @printf("psum[%i]=%f\n",i,__P_SUM[i])
+  #for i in end_index:-1:1
+  # s += (1.0/i)^e
   #end
 
   # sum reduction
-  s += @distributed (+) for i in 1:VLEN
-       __P_SUM[i]
+  for i in 1:VLEN
+       s+=__P_SUM[i]
   end
 
   s
-
 end
 
-#N = 16000000000
-N = 16000000
 
+to = TimerOutput()
 
-@time ζ_2 = ζ(N,2)
-π_squared_over_6 = π^2 / 6.0;
+N = 16000000000
 
-@printf "      ζ(2) = %18.16f\n" ζ_2
-@printf "π^2 / 6.0  = %18.16f\n" π_squared_over_6
-@printf "     error = %18.16f\n" π_squared_over_6 - ζ_2
+st = 1
+s =  zeros(Float64,32)
+pd = zeros(Float64,32)
+ndx = 1
+#ENV["JULIA_DEBUG"] = "CUDAnative"
+
+s[1] = ζ(N,2)
+
+for i=1:1
+  @printf("s[%i] = %f\n",i,s[i])
+end
+
+@timeit to "ζ"       pd[ndx] = ζ(N,2)
+ndx+=1
+
+for i=1:1
+  @printf("pd[%i] = %f\n",i,pd[i])
+end
+
+show(to)
+@printf("\n");

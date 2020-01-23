@@ -1,110 +1,79 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <cub/cub.cuh>
-
 #include <cuda.h>
-#include <cstring>
 #include <ctime>
-
-#include "Utilities.cuh"
-
 #include <iostream>
 
-#define M 1024
-#define BLOCKSIZE   32
-#define WARP_SIZE 32
 
 // timing of functions
 clock_t start,end;
 
+
 /* invert and square every element of the input array in parallel */
-__global__ void
-_cuda_create_inverted_squared_array(double *in, unsigned int n, unsigned int offset)
+__global__ void _innergpu_2_sqr(double *psum,int64_t panel)
 {
-    unsigned int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    while(globalIdx < n)
-    {
-        in[globalIdx] = 1.0/(__uint2double_rn(globalIdx+offset) * __uint2double_rn(globalIdx+offset));
-        globalIdx += blockDim.x * gridDim.x;
-    }
+    int64_t globalIdx;
+    globalIdx = (panel - 1) * blockDim.x*blockDim.x +
+        blockIdx.x * blockDim.x + threadIdx.x + 1;
+    int ndx = threadIdx.x;
+    double  r = 1.0/(double)globalIdx;
+    double r2 = r*r;
+    atomicAdd(&psum[ndx],r2);
 }
 
-// Riemann zeta function (2)
-void cuda_riemann_zeta_function(int N) {
-    // Get device properties to compute optimal launch bounds
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
+int main()
+{
 
-    int pagesize=getpagesize();
-    double sum = 0.0, *h_result = (double *)malloc((M / BLOCKSIZE) * sizeof(double))
-    int _N;
-    int num_SMs = prop.multiProcessorCount;
+    //int64_t   N = 16000000000;
+    int64_t   N = 160000;
+    //int Nthr=1024;
+    int i , Nthr=1024;
+    int64_t Nblocks,Npanels, j;
 
-    // cheat a little ... reduce N by N mod (num_SMs*1024), so that
-    // we don't have to pad with zeros, or put conditionals in
-    // the vector flow
-    _N = N - (N % (num_SMs * 1024));
+    double sum = 0.0;
+    int64_t _N;
+
+    _N = N - (N %  Nthr);
+    Npanels = 1;
+    Nblocks = (int64_t)ceil((double)_N/(double)Nthr);
+    if (Nblocks > Nthr*Nthr) {
+        Nblocks = Nthr*Nthr;
+        Npanels = (int64_t)ceil((double)_N/((double)Nthr*(double)Nblocks));
+    }
+
+    double *ps_h, *ps_d;
+    start = std::clock();
+
+    ps_h = (double*)calloc(Nthr,sizeof(double));
+    cudaMalloc(  &ps_d, Nthr * sizeof(double) );
+    cudaMemcpy(ps_d,ps_h,Nthr*sizeof(double), cudaMemcpyHostToDevice);
 
     // we will handle the remaining portions on CPU, here
     for(i = N ; i>_N; i--) {
-       sum += pow(1.0/(double)i,2.0);
+      sum += pow(1.0/(double)i,2.0);
     }
-
-
-    double * d_a;
-    start = std::clock();
-
-    // create array on GPU
-    cudaMalloc( (void**) &d_a, _N * sizeof(double) );
-
+    printf("Npanels=%lli, Nblocks=%lli\n",Npanels,Nblocks);
 
     // first compute inverse square
-    _cuda_create_inverted_squared_array<<< num_SMs, 1024 >>>(d_a, scalar, _N);
+    for (j=0;j<Npanels;j++) {
+       _innergpu_2_sqr<<< Nblocks, Nthr >>>(ps_d,j);
+    }
+    //_innergpu_2_sqr<<< _N, 1 >>>(ps_d);
+    cudaMemcpy(ps_h,ps_d,Nthr*sizeof(double), cudaMemcpyDeviceToHost);
+    for(i = 0 ; i<Nthr; i++) {
+      //printf("ps_h[%lld]=%18.15f, sum=%18.15f\n",i,ps_h[i],sum);
+      sum += ps_h[i];
+    }
 
-    // second, parallel sum reduction over d_a
-    reduce6();
     end = std::clock();
 
 
     // Clean up
-    cudaFree(d_a);
-    free(a);
-}
+    cudaFree(ps_d);
+    free(ps_h);
 
-/**************************/
-/* BLOCK REDUCTION KERNEL */
-/**************************/
-__global__ void sum(const double * __restrict__ indata, double * __restrict__ outdata) {
-
-    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // --- Specialize BlockReduce for type float.
-    typedef cub::BlockReduce<double, BLOCKSIZE> BlockReduceT;
-
-    // --- Allocate temporary storage in shared memory
-    __shared__ typename BlockReduceT::TempStorage temp_storage;
-
-    float result;
-    if(tid < N) result = BlockReduceT(temp_storage).Sum(indata[tid]);
-
-    // --- Update block reduction value
-    if(threadIdx.x == 0) outdata[blockIdx.x] = result;
-
-    return;
-}
-
-
-
-int main()
-{
- double  y=0.0;
- int i,N = 100000000;
-
-  for(i=N;i>=1;i--) {
-     y += pow(1.0/(double)i,2.0);
-  }
-
- printf("[index decreasing] sum = %18.16f\n",y);
+    printf("sum = %18.16f\n",sum);
 }
