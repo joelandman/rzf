@@ -27,8 +27,8 @@ __global__ void _innergpu_2_sqr(double *psum,int64_t panel)
 int main()
 {
 
-    //int64_t   N = 16000000000;
-    int64_t   N = 160000;
+    int64_t   N = 16000000000;
+    //int64_t   N = 160000000;
     //int Nthr=1024;
     int i , Nthr=1024;
     int64_t Nblocks,Npanels, j;
@@ -58,7 +58,7 @@ int main()
     printf("Npanels=%lli, Nblocks=%lli\n",Npanels,Nblocks);
 
     // first compute inverse square
-    for (j=0;j<Npanels;j++) {
+    for (j=1;j<=Npanels;j++) {
        _innergpu_2_sqr<<< Nblocks, Nthr >>>(ps_d,j);
     }
     //_innergpu_2_sqr<<< _N, 1 >>>(ps_d);
