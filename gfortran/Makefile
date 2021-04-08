@@ -1,7 +1,7 @@
-OPT    = -Ofast -ffree-form -mtune=native -finline-functions -mavx
-CFLAGS = ${OPT} -g
-CAFLAGS = -Wa,-adhln -g
-GFVER=-8
+OPT    = -Ofast -ffast-math  -ffree-form -mtune=native -finline-functions -mavx2 -ftree-vectorize -faggressive-loop-optimizations -funsafe-math-optimizations
+CFLAGS = ${OPT} 
+CAFLAGS = -Wa,-adhln 
+GFVER=-10
 
 all: frzf.x frzf_vect.x frzf_vect_omp.x
 

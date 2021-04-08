@@ -15,8 +15,8 @@ Nthr  = omp_get_num_threads()
 
 u     = N/Nthr * (thrid + 1)
 l     = N/Nthr * (thrid) + 1
-z2    = zeta(u,l,2_8)
-!z2      = zeta_fixed2(u,l)
+!z2    = zeta(u,l,2_8)
+z2      = zeta_fixed2(u,l)
 
 !$OMP ATOMIC
 zeta_2 = zeta_2 + z2
